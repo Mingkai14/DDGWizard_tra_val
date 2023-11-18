@@ -12,7 +12,7 @@ from sklearn.model_selection import GroupKFold
 
 
 #load data and drop ID column
-df = pd.read_csv('./data/whole_fea_after_double.csv')
+df = pd.read_csv('./data/S7089_fea_after_double.csv')
 df.drop('ID', axis=1, inplace=True)
 
 fea_index_class_a=[0,1]
