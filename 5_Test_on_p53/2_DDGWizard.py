@@ -69,13 +69,13 @@ print(float(p_value))
 output.append(pearson)
 output.append(rmse)
 
-# MSE: 2.6168654032490073
-# RMSE: 1.6176728356651746
-# MAE: 1.2341195155573743
-# R^2 Score: 0.18312448068447928
-# pearson: 0.6355359018266018
-# spearman: 0.6420323330904992
-# p-value: 4.586046053813987e-06
+# MSE: 2.49347832298983
+# RMSE: 1.5790751479868936
+# MAE: 1.207433549591473
+# R^2 Score: 0.22164074718347526
+# pearson: 0.6088601765338993
+# spearman: 0.5807706337573656
+# p-value: 5.522872796243778e-05
 
 
 
@@ -108,13 +108,13 @@ print(float(p_value))
 output.append(pearson)
 output.append(rmse)
 
-# MSE: 2.5256769725902637
-# RMSE: 1.5892378590350356
-# MAE: 1.1607408504046144
-# R^2 Score: 0.21158968052144655
-# pearson: 0.6567972517593555
-# spearman: 0.674283862633604
-# p-value: 9.796343168022877e-07
+# MSE: 2.1278227708970645
+# RMSE: 1.4587058548237422
+# MAE: 1.0550432482716583
+# R^2 Score: 0.33578305982803547
+# pearson: 0.6757411864521143
+# spearman: 0.67177180882497
+# p-value: 1.1123060654561647e-06
 
 
 # total
@@ -146,13 +146,13 @@ print(float(p_value))
 output.append(pearson)
 output.append(rmse)
 
-# MSE: 2.571271187919635
-# RMSE: 1.6035183777929192
-# MAE: 1.1974301829809944
-# R^2 Score: 0.5104030314588721
-# pearson: 0.7852882329987936
-# spearman: 0.7582694628220773
-# p-value: 6.687090429307168e-17
+# MSE: 2.3106505469434473
+# RMSE: 1.520082414523452
+# MAE: 1.1312383989315655
+# R^2 Score: 0.5600279315319077
+# pearson: 0.7861117938176155
+# spearman: 0.7686069237196543
+# p-value: 1.3987537387524606e-17
 
 covariance = np.cov(pred_for, pred_rev)[0, 1]
 std_deviation_forward = np.std(pred_for)
@@ -161,7 +161,7 @@ r_dr=covariance/(std_deviation_forward*std_deviation_reverse)
 print('r_dr:')
 print(r_dr)
 output.append(r_dr)
-#-0.8635371743677847
+#-0.8851821614664617
 
 assert len(pred_for)==len(pred_rev)
 count=len(pred_for)
@@ -172,7 +172,7 @@ bias=sum/(count*2)
 print('bias:')
 print(bias)
 output.append(bias)
-#-0.017547009801048608
+#0.06055745695318494
 
 assert len(true_for)==len(pred_for)
 assert len(true_rev)==len(pred_rev)
@@ -197,7 +197,7 @@ sign_correctly_predicted_reverse=sign_correctly_prediction_reverse/count
 print('sign_correctly_predicted_reverse:')
 print(sign_correctly_predicted_reverse)
 output.append(sign_correctly_predicted_reverse)
-#0.8095238095238095
+#0.7380952380952381
 
 assert len(pred_for)==len(pred_rev)
 count=len(pred_for)
@@ -209,7 +209,7 @@ inconsistence=inconsistent_count/count
 print('inconsistence:')
 print(inconsistence)
 output.append(inconsistence)
-#0.16666666666666666
+#0.14285714285714285
 
 import xlwt
 wb=xlwt.Workbook()
