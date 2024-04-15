@@ -16,7 +16,7 @@ Thermostability is an important property of proteins and increasing protein ther
 
 # DDGWizard_tra_val
 
-This repo includes reproducible codes when DDGWizard training, evaluating, and comparing with other ΔΔG predictive methods, as well as reusable data.
+This repo includes reproducible programs when DDGWizard training, evaluating, and comparing with other ΔΔG predictive methods, as well as reusable data.
 
 # Installation (using python 3.10.13 when developing)
 
