@@ -10,32 +10,82 @@ from scipy.stats import spearmanr
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 
+def evalue(true_for:list,pred_for:list,true_rev:list,pred_rev:list,true_total:list,pred_total:list):
+    for_mse = mean_squared_error(true_for, pred_for)
+    for_rmse = np.sqrt(mean_squared_error(true_for, pred_for))
+    for_mae = mean_absolute_error(true_for, pred_for)
+    for_r2 = r2_score(true_for, pred_for)
+
+    y_test = np.array(true_for).reshape((-1, 1))
+    y_pred = np.array(pred_for).reshape((-1, 1))
+    yy = np.concatenate([y_test, y_pred], -1)
+    yy = yy.T
+    corr_matrix = np.corrcoef(yy)
+    for_pearson = corr_matrix[0][1]
+
+    correlation, p_value = spearmanr(y_test, y_pred)
+    for_spearman = correlation
+
+    rev_mse = mean_squared_error(true_rev, pred_rev)
+    rev_rmse = np.sqrt(mean_squared_error(true_rev, pred_rev))
+    rev_mae = mean_absolute_error(true_rev, pred_rev)
+    rev_r2 = r2_score(true_rev, pred_rev)
+
+    y_test = np.array(true_rev).reshape((-1, 1))
+    y_pred = np.array(pred_rev).reshape((-1, 1))
+    yy = np.concatenate([y_test, y_pred], -1)
+    yy = yy.T
+    corr_matrix = np.corrcoef(yy)
+    rev_pearson = corr_matrix[0][1]
+
+    correlation, p_value = spearmanr(y_test, y_pred)
+    rev_spearman = correlation
+
+    total_mse = mean_squared_error(true_total, pred_total)
+    total_rmse = np.sqrt(mean_squared_error(true_total, pred_total))
+    total_mae = mean_absolute_error(true_total, pred_total)
+    total_r2 = r2_score(true_total, pred_total)
+
+    y_test = np.array(true_total).reshape((-1, 1))
+    y_pred = np.array(pred_total).reshape((-1, 1))
+    yy = np.concatenate([y_test, y_pred], -1)
+    yy = yy.T
+    corr_matrix = np.corrcoef(yy)
+    total_pearson = corr_matrix[0][1]
+
+    correlation, p_value = spearmanr(y_test, y_pred)
+    total_spearman = correlation
+
+    covariance = np.cov(pred_for, pred_rev)[0, 1]
+    std_deviation_forward = np.std(pred_for)
+    std_deviation_reverse = np.std(pred_rev)
+    r_dr = covariance / (std_deviation_forward * std_deviation_reverse)
+
+    assert len(pred_for) == len(pred_rev)
+    count = len(pred_for)
+    sum = 0.0
+    for i in range(count):
+        sum += pred_for[i] + pred_rev[i]
+    bias = sum / (count * 2)
+
+    return for_pearson,for_r2,for_rmse,rev_pearson,rev_r2,rev_rmse,total_pearson,total_r2,total_rmse,r_dr,bias
+
 
 
 data = pd.read_csv("./data/fea_data/S7089_fea_after_double.csv")  # 读取数据
 data = data.drop("ID", axis=1)  # 删除ID列
 
-ddgun3d_data=pd.read_excel("./data/ddgun_res.xls")
-ddgun3d_data=ddgun3d_data.drop("id",axis=1)
-ddgun3d_data=ddgun3d_data.drop("for_or_rev",axis=1)
-ddgun3d_data=ddgun3d_data.drop("pdb_path",axis=1)
-ddgun3d_data=ddgun3d_data.drop("mutation",axis=1)
-ddgun3d_data=ddgun3d_data.drop("chain",axis=1)
-y_ddgun3d=ddgun3d_data["ddg"].values
 
-acdc_data=pd.read_excel("./data/acdcnn_res.xls")
-acdc_data=acdc_data.drop("id",axis=1)
-acdc_data=acdc_data.drop("for_or_rev",axis=1)
-acdc_data=acdc_data.drop("pdb_path",axis=1)
-acdc_data=acdc_data.drop("mutation",axis=1)
-acdc_data=acdc_data.drop("chain",axis=1)
-y_acdc=acdc_data["ddg"].values
+
+
 
 
 rfe_infos = pd.read_excel("./resource/rfe_infos.xlsx")  # 读取RFE模型的特征信息
 X_cols = rfe_infos[rfe_infos["ranking"] == 1]["feature_names"].tolist()  # 最佳特征组合
 X = data[X_cols].values  # 取出特征值 X
 y = data["Experimental_DDG"].values  # 取出目标值 y
+temp_test=y.tolist()
+
 
 sc = StandardScaler()  # 定义标准化模型
 X = sc.fit_transform(X)  # 标准化
@@ -45,37 +95,29 @@ BO_params= pd.read_excel("./resource/BO_Best_Param.xlsx")
 
 
 count=1
-mse_list = []
-rmse_list = []
-mae_list = []
-r2_list = []
-pearson_list = []
-spearman_list = []
-
-mse_list_ddgun3d = []
-rmse_list_ddgun3d = []
-mae_list_ddgun3d = []
-r2_list_ddgun3d = []
-pearson_list_ddgun3d = []
-spearman_list_ddgun3d = []
-
-mse_list_acdc = []
-rmse_list_acdc = []
-mae_list_acdc = []
-r2_list_acdc = []
-pearson_list_acdc = []
-spearman_list_acdc = []
+for_pearson_list=[]
+for_r2_list=[]
+for_rmse_list=[]
+rev_pearson_list=[]
+rev_r2_list=[]
+rev_rmse_list=[]
+total_pearson_list=[]
+total_r2_list=[]
+total_rmse_list=[]
+r_dr_list=[]
+bias_list=[]
 
 whole_y_test=np.array([])
 whole_y_pred=np.array([])
+
+each_fold_true_data_DDGWizard=[]
+each_fold_pred_data_DDGWizard=[]
 
 groups = [i // 2 for i in range(len(X))]  # define groups
 for train_idxs, test_idxs in GroupKFold(n_splits=20).split(X, groups=groups):  # 10折交叉验证
     count+=1
     X_train, X_test = X[train_idxs], X[test_idxs]  # 划分训练集和测试集
     y_train, y_test = y[train_idxs], y[test_idxs]  # 划分训练集和测试集
-    y_pred_ddgun3d=y_ddgun3d[test_idxs]
-    y_pred_acdc = y_acdc[test_idxs]
 
     model = XGBRegressor(n_estimators=int(BO_params['n_estimators']),max_depth=int(BO_params['max_depth']),eta=float(BO_params['eta']),subsample=float(BO_params['subsample']),colsample_bytree=float(BO_params['colsample_bytree']),learning_rate=float(BO_params['learning_rate']),random_state=42)  # 定义XGBoost模型
     model.fit(X_train, y_train)  # 训练模型
@@ -84,200 +126,156 @@ for train_idxs, test_idxs in GroupKFold(n_splits=20).split(X, groups=groups):  #
     whole_y_test=np.append(whole_y_test,y_test)
     whole_y_pred=np.append(whole_y_pred, y_pred)
 
-    mse = mean_squared_error(y_test, y_pred)
-    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-    mae = mean_absolute_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
+    true_total=y_test.tolist()
+    pred_total=y_pred.tolist()
+    true_for=true_total[::2]
+    true_rev=true_total[1::2]
+    pred_for=pred_total[::2]
+    pred_rev=pred_total[1::2]
+
+    each_fold_true_data_DDGWizard.append(true_total)
+    each_fold_pred_data_DDGWizard.append(pred_total)
+
+    assert len(true_total) % 2 == 0
+    assert len(pred_total) % 2 == 0
+
+    for_pearson,for_r2,for_rmse,rev_pearson,rev_r2,rev_rmse,total_pearson,total_r2,total_rmse,r_dr,bias=evalue(true_for,pred_for,true_rev,pred_rev,true_total,pred_total)
+    for_pearson_list.append(for_pearson)
+    for_r2_list.append(for_r2)
+    for_rmse_list.append(for_rmse)
+    rev_pearson_list.append(rev_pearson)
+    rev_r2_list.append(rev_r2)
+    rev_rmse_list.append(rev_rmse)
+    total_pearson_list.append(total_pearson)
+    total_r2_list.append(total_r2)
+    total_rmse_list.append(total_rmse)
+    r_dr_list.append(r_dr)
+    bias_list.append(bias)
 
 
-    mse_ddgun3d = mean_squared_error(y_test, y_pred_ddgun3d)
-    rmse_ddgun3d = np.sqrt(mean_squared_error(y_test, y_pred_ddgun3d))
-    mae_ddgun3d = mean_absolute_error(y_test, y_pred_ddgun3d)
-    r2_ddgun3d = r2_score(y_test, y_pred_ddgun3d)
+print(sum(for_pearson_list) / 20)
+print(sum(for_r2_list) / 20)
+print(sum(for_rmse_list) / 20)
+print(sum(rev_pearson_list) / 20)
+print(sum(rev_r2_list) / 20)
+print(sum(rev_rmse_list) / 20)
+print(sum(total_pearson_list) / 20)
+print(sum(total_r2_list) / 20)
+print(sum(total_rmse_list) / 20)
+print(sum(r_dr_list) / 20)
+print(sum(bias_list) / 20)
 
-    mse_acdc = mean_squared_error(y_test, y_pred_acdc)
-    rmse_acdc = np.sqrt(mean_squared_error(y_test, y_pred_acdc))
-    mae_acdc = mean_absolute_error(y_test, y_pred_acdc)
-    r2_acdc = r2_score(y_test, y_pred_acdc)
+import xlwt
 
-    y_test = np.array(y_test).reshape((-1, 1))
-    y_pred = y_pred.reshape((-1, 1))
-    y_pred_ddgun3d = y_pred_ddgun3d.reshape((-1, 1))
-    y_pred_acdc = y_pred_acdc.reshape((-1, 1))
+columns=['forward_pearson','forward_RMSE','reverse_pearson','reverse_RMSE','total_pearson','total_RMSE','r_dr','bias']
+output=[sum(for_pearson_list) / 20,sum(for_rmse_list) / 20,sum(rev_pearson_list) / 20,sum(rev_rmse_list) / 20,sum(total_pearson_list) / 20,sum(total_rmse_list) / 20,sum(r_dr_list) / 20,sum(bias_list) / 20]
+wb=xlwt.Workbook()
+ws=wb.add_sheet('sheet1')
+for i in range(len(columns)):
+    ws.write(0,i,columns[i])
+for i in range(len(output)):
+    ws.write(1,i,output[i])
+wb.save('./evaluation/cv_20fold_DDGWizard.xls')
 
-    yy = np.concatenate([y_test, y_pred], -1)
-    yy = yy.T
-    corr_matrix = np.corrcoef(yy)
-    pearson = corr_matrix[0][1]
-
-    yy = np.concatenate([y_test, y_pred_ddgun3d], -1)
-    yy = yy.T
-    corr_matrix = np.corrcoef(yy)
-    pearson_ddgun3d = corr_matrix[0][1]
-
-    yy = np.concatenate([y_test, y_pred_acdc], -1)
-    yy = yy.T
-    corr_matrix = np.corrcoef(yy)
-    pearson_acdc = corr_matrix[0][1]
-
-    correlation, p_value = spearmanr(y_test, y_pred)
-    spearman = correlation
-
-    correlation, p_value = spearmanr(y_test, y_pred_ddgun3d)
-    spearman_ddgun3d = correlation
-
-    correlation, p_value = spearmanr(y_test, y_pred_acdc)
-    spearman_acdc = correlation
-
-
-
-
-    print(f'cross {count}:')
-    print('DDGWizard:')
-    print("MSE:", mse)
-    print("RMSE:", rmse)
-    print("MAE:", mae)
-    print("R^2 Score:", r2)
-    print("pearson:", pearson)
-    print("spearman:", spearman)
-    print('\n')
-
-    mse_list.append(mse)
-    rmse_list.append(rmse)
-    mae_list.append(mae)
-    r2_list.append(r2)
-    pearson_list.append(pearson)
-    spearman_list.append(spearman)
-
-    print(f'ddgun3d:')
-    print("MSE:", mse_ddgun3d)
-    print("RMSE:", rmse_ddgun3d)
-    print("MAE:", mae_ddgun3d)
-    print("R^2 Score:", r2_ddgun3d)
-    print("pearson:", pearson_ddgun3d)
-    print("spearman:", spearman_ddgun3d)
-    print('\n')
-
-    mse_list_ddgun3d.append(mse_ddgun3d)
-    rmse_list_ddgun3d.append(rmse_ddgun3d)
-    mae_list_ddgun3d.append(mae_ddgun3d)
-    r2_list_ddgun3d.append(r2_ddgun3d)
-    pearson_list_ddgun3d.append(pearson_ddgun3d)
-    spearman_list_ddgun3d.append(spearman_ddgun3d)
-
-    print(f'acdcnn:')
-    print("MSE:", mse_acdc)
-    print("RMSE:", rmse_acdc)
-    print("MAE:", mae_acdc)
-    print("R^2 Score:", r2_acdc)
-    print("pearson:", pearson_acdc)
-    print("spearman:", spearman_acdc)
-    print('\n')
-
-    mse_list_acdc.append(mse_acdc)
-    rmse_list_acdc.append(rmse_acdc)
-    mae_list_acdc.append(mae_acdc)
-    r2_list_acdc.append(r2_acdc)
-    pearson_list_acdc.append(pearson_acdc)
-    spearman_list_acdc.append(spearman_acdc)
+ddgun3d_data=pd.read_excel("./data/ddgun_res.xls")
+ddgun3d_data=ddgun3d_data.drop("id",axis=1)
+ddgun3d_data=ddgun3d_data.drop("for_or_rev",axis=1)
+ddgun3d_data=ddgun3d_data.drop("pdb_path",axis=1)
+ddgun3d_data=ddgun3d_data.drop("mutation",axis=1)
+ddgun3d_data=ddgun3d_data.drop("chain",axis=1)
+y_ddgun3d=ddgun3d_data["ddg"].values
 
 
 
+true_total = temp_test
+pred_total = y_ddgun3d
+true_for = true_total[::2]
+true_rev = true_total[1::2]
+pred_for = pred_total[::2]
+pred_rev = pred_total[1::2]
+for_pearson,for_r2,for_rmse,rev_pearson,rev_r2,rev_rmse,total_pearson,total_r2,total_rmse,r_dr,bias=evalue(true_for,pred_for,true_rev,pred_rev,true_total,pred_total)
+print(for_pearson)
+print(for_r2)
+print(for_rmse)
+print(rev_pearson)
+print(rev_r2)
+print(rev_rmse)
+print(total_pearson)
+print(total_r2)
+print(total_rmse)
+print(r_dr)
+print(bias)
+
+columns=['forward_pearson','forward_RMSE','reverse_pearson','reverse_RMSE','total_pearson','total_RMSE','r_dr','bias']
+output=[for_pearson,for_rmse,rev_pearson,rev_rmse,total_pearson,total_rmse,r_dr,bias]
+wb=xlwt.Workbook()
+ws=wb.add_sheet('sheet1')
+for i in range(len(columns)):
+    ws.write(0,i,columns[i])
+for i in range(len(output)):
+    ws.write(1,i,output[i])
+wb.save('./evaluation/cv_20fold_ddgun3D.xls')
 
 
 
+acdc_data=pd.read_excel("./data/acdcnn_res.xls")
+acdc_data=acdc_data.drop("id",axis=1)
+acdc_data=acdc_data.drop("for_or_rev",axis=1)
+acdc_data=acdc_data.drop("pdb_path",axis=1)
+acdc_data=acdc_data.drop("mutation",axis=1)
+acdc_data=acdc_data.drop("chain",axis=1)
+y_acdc=acdc_data["ddg"].values
 
-print('average: ')
-print('DDGWizard')
-print("MSE:", sum(mse_list) / 20)
-print("RMSE:", sum(rmse_list) / 20)
-print("MAE:", sum(mae_list) / 20)
-print("R^2 Score:", sum(r2_list) / 20)
-print("pearson:", sum(pearson_list) / 20)
-print("spearman:", sum(spearman_list) / 20)
-print('\n')
+true_total = temp_test
+pred_total = y_acdc
+true_for = true_total[::2]
+true_rev = true_total[1::2]
+pred_for = pred_total[::2]
+pred_rev = pred_total[1::2]
+for_pearson,for_r2,for_rmse,rev_pearson,rev_r2,rev_rmse,total_pearson,total_r2,total_rmse,r_dr,bias=evalue(true_for,pred_for,true_rev,pred_rev,true_total,pred_total)
+print(for_pearson)
+print(for_r2)
+print(for_rmse)
+print(rev_pearson)
+print(rev_r2)
+print(rev_rmse)
+print(total_pearson)
+print(total_r2)
+print(total_rmse)
+print(r_dr)
+print(bias)
 
-
-print('ddgun3D:')
-print("MSE:", sum(mse_list_ddgun3d) / 20)
-print("RMSE:", sum(rmse_list_ddgun3d) / 20)
-print("MAE:", sum(mae_list_ddgun3d) / 20)
-print("R^2 Score:", sum(r2_list_ddgun3d) / 20)
-print("pearson:", sum(pearson_list_ddgun3d) / 20)
-print("spearman:", sum(spearman_list_ddgun3d) / 20)
-print('\n')
-
-
-print('acdcnn:')
-print("MSE:", sum(mse_list_acdc) / 20)
-print("RMSE:", sum(rmse_list_acdc) / 20)
-print("MAE:", sum(mae_list_acdc) / 20)
-print("R^2 Score:", sum(r2_list_acdc) / 20)
-print("pearson:", sum(pearson_list_acdc) / 20)
-print("spearman:", sum(spearman_list_acdc) / 20)
-print('\n')
-
-
-
-
-evaluate_result = pd.DataFrame(
-    np.array([mse_list, rmse_list, mae_list, r2_list, pearson_list, spearman_list]),
-    index=["mse", "rmse", "mae", "r2", "pearson", "spearman"],
-    columns=[f"split{i}_test_score" for i in range(20)],
-)
-evaluate_result["mean"] = evaluate_result.mean(axis=1)  # 计算平均评估结果
-evaluate_result["std"] = evaluate_result.std(axis=1)  # 计算评估结果标准差
-evaluate_result.to_excel("./evaluation/cv_20fold_DDGWizard.xlsx", index=True)  # 保存评估结果
-
-
-
-evaluate_result = pd.DataFrame(
-    np.array([mse_list_ddgun3d, rmse_list_ddgun3d, mae_list_ddgun3d, r2_list_ddgun3d, pearson_list_ddgun3d, spearman_list_ddgun3d]),
-    index=["mse", "rmse", "mae", "r2", "pearson", "spearman"],
-    columns=[f"split{i}_test_score" for i in range(20)],
-)
-evaluate_result["mean"] = evaluate_result.mean(axis=1)  # 计算平均评估结果
-evaluate_result["std"] = evaluate_result.std(axis=1)  # 计算评估结果标准差
-evaluate_result.to_excel("./evaluation/cv_20fold_ddgun3D.xlsx", index=True)  # 保存评估结果
-
-
-
-evaluate_result = pd.DataFrame(
-    np.array([mse_list_acdc, rmse_list_acdc, mae_list_acdc, r2_list_acdc, pearson_list_acdc, spearman_list_acdc]),
-    index=["mse", "rmse", "mae", "r2", "pearson", "spearman"],
-    columns=[f"split{i}_test_score" for i in range(20)],
-)
-evaluate_result["mean"] = evaluate_result.mean(axis=1)  # 计算平均评估结果
-evaluate_result["std"] = evaluate_result.std(axis=1)  # 计算评估结果标准差
-evaluate_result.to_excel("./evaluation/cv_20fold_acdc.xlsx", index=True)  # 保存评估结果
+columns=['forward_pearson','forward_RMSE','reverse_pearson','reverse_RMSE','total_pearson','total_RMSE','r_dr','bias']
+output=[for_pearson,for_rmse,rev_pearson,rev_rmse,total_pearson,total_rmse,r_dr,bias]
+wb=xlwt.Workbook()
+ws=wb.add_sheet('sheet1')
+for i in range(len(columns)):
+    ws.write(0,i,columns[i])
+for i in range(len(output)):
+    ws.write(1,i,output[i])
+wb.save('./evaluation/cv_20fold_acdc.xls')
 
 scatter_dict={'x':whole_y_test,'y':whole_y_pred}
 scatter_df=pd.DataFrame(scatter_dict)
 scatter_df.to_excel("./evaluation/scatter_result.xlsx", index=False, header=True)
 
+assert len(each_fold_true_data_DDGWizard)==20
+assert len(each_fold_pred_data_DDGWizard)==20
 
+data = []
 
-# average
-# DDGWizard
-# 均方误差（MSE）: 1.5581813285884114
-# 均方根误差（RMSE）: 1.2440864082047312
-# 平均绝对误差（MAE）: 0.765860492187103
-# 决定系数（R^2 Score）: 0.6148158643804713
-# 皮尔逊相关系数（pearson）: 0.7846851571122049
-# 斯皮尔曼相关系数（spearman）: 0.7490357429271467
+# 遍历每个子列表的索引
+for i in range(len(each_fold_true_data_DDGWizard)):
+    # 添加标记行
+    data.append([f"Number {i + 1} fold"])
 
-# ddgun3D
-# 均方误差（MSE）: 3.114584780637781
-# 均方根误差（RMSE）: 1.7582633998797177
-# 平均绝对误差（MAE）: 1.2142866137502983
-# 决定系数（R^2 Score）: 0.23492668222070517
-# 皮尔逊相关系数（pearson）: 0.5009459567716277
-# 斯皮尔曼相关系数（spearman）: 0.46207876651106494
+    # 添加两个子列表中的数据
+    for j in range(len(each_fold_true_data_DDGWizard[i])):
+        data.append([each_fold_true_data_DDGWizard[i][j], each_fold_pred_data_DDGWizard[i][j]])
 
-# acdcnn
-# 均方误差（MSE）: 2.873898920788477
-# 均方根误差（RMSE）: 1.688668777668256
-# 平均绝对误差（MAE）: 1.142565046055251
-# 决定系数（R^2 Score）: 0.29476470606902816
-# 皮尔逊相关系数（pearson）: 0.5422235370705986
-# 斯皮尔曼相关系数（spearman）: 0.5355697335683464
+# 将数据转换为DataFrame
+df = pd.DataFrame(data, columns=["True", "Pred"])
+
+# 将DataFrame保存到Excel文件中
+df.to_excel("./data/DDGWizard_res.xlsx", index=False, header=False)
+
