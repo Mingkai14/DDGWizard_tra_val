@@ -11,9 +11,9 @@ To ensure reproducibility, the training and validation process's source code as 
 
 # Installation
 
-## Recommendate to use python 3.10.13 to install, which is the python version when developing
+**pip install -r requirements.txt**
 
-## pip install -r requirements.txt
+**Note: Recommendate to use python 3.10.13 to install, which is the python version when developing**
 
 # Reference
 
